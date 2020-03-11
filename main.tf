@@ -52,7 +52,7 @@ resource "aws_instance" "nomad_server" {
   iam_instance_profile        = data.terraform_remote_state.consul.outputs.instance_profile
   private_ip                  = "${var.IP["client"]}${count.index + 1}"
   key_name                    = "denislav_key_pair"
-  associate_public_ip_address = false  
+  associate_public_ip_address = true  
   count                       = var.server_count
   user_data                   = data.template_file.var.rendered
   depends_on                  = [data.terraform_remote_state.nw]
@@ -64,6 +64,50 @@ resource "aws_instance" "nomad_server" {
     join_wan = var.join_wan
   }
 
+}
+
+resource "aws_lb" "lb" {
+  name               = "webpage-counter-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = data.terraform_remote_state.nw.outputs.pubic_sec_group
+  subnets            = data.terraform_remote_state.nw.outputs.public_subnets
+
+  tags = {
+    Environment = "production"
+  }
+}
+
+resource "aws_lb_target_group" "tg" {
+  name     = "wpc-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = data.terraform_remote_state.nw.outputs.VPC_ID
+  health_check {
+    matcher = 200
+    path    = "/health"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "test" {
+  target_group_arn = aws_lb_target_group.tg.arn
+  target_id        = aws_instance.nomad_server[0].id
+  port             = 9999
+}
+
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.lb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg.arn
+  }
+}
+
+output "lb" {
+  value = aws_lb.lb.dns_name
 }
 
 # Outputs the instances public ips.
