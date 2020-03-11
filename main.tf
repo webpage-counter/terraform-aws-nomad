@@ -67,7 +67,7 @@ resource "aws_instance" "nomad_server" {
 }
 
 resource "aws_lb" "lb" {
-  name               = "webpage-counter-lb"
+  name               = "webpage-counter-lb-UI"
   internal           = false
   load_balancer_type = "application"
   security_groups    = data.terraform_remote_state.nw.outputs.pubic_sec_group
@@ -85,14 +85,14 @@ resource "aws_lb_target_group" "tg" {
   vpc_id   = data.terraform_remote_state.nw.outputs.VPC_ID
   health_check {
     matcher = 200
-    path    = "/health"
+    path    = "/"
   }
 }
 
 resource "aws_lb_target_group_attachment" "test" {
   target_group_arn = aws_lb_target_group.tg.arn
   target_id        = aws_instance.nomad_server[0].id
-  port             = 9999
+  port             = 4646
 }
 
 resource "aws_lb_listener" "front_end" {
