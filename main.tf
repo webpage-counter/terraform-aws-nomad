@@ -52,7 +52,7 @@ resource "aws_instance" "nomad_server" {
   iam_instance_profile        = data.terraform_remote_state.consul.outputs.instance_profile
   private_ip                  = "${var.IP["client"]}${count.index + 1}"
   key_name                    = "denislav_key_pair"
-  associate_public_ip_address = true  
+  associate_public_ip_address = false  
   count                       = var.server_count
   user_data                   = data.template_file.var.rendered
   depends_on                  = [data.terraform_remote_state.nw]
